@@ -22,6 +22,15 @@ const PREDEFINED_TAGS = [
   'a21', 'a22', 'a23', 'a24', 'a25', 'a26', 'a27', 'a28', 'a29', 'a30'
 ];
 
+// Tag colors for rotation
+const TAG_COLORS = [
+  '#fde4f8', // Pink
+  '#dbf3f8', // Light Blue
+  '#dde6fa', // Light Purple
+  '#d9f4e5', // Light Green
+  '#fbeddc'  // Light Orange
+];
+
 export default function SaveQuery() {
   const [queryData, setQueryData] = useState<SavedQuery | null>(null);
   const [name, setName] = useState('');
@@ -30,6 +39,7 @@ export default function SaveQuery() {
   const [saving, setSaving] = useState(false);
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
   const [showSavedQueries, setShowSavedQueries] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(false);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -74,6 +84,15 @@ export default function SaveQuery() {
         ? prev.filter(t => t !== tag)
         : [...prev, tag]
     );
+  };
+
+  const getTagColor = (index: number) => {
+    return TAG_COLORS[index % TAG_COLORS.length];
+  };
+
+  const getTagTextColor = (bgColor: string) => {
+    // Return dark text for all these light backgrounds
+    return '#374151'; // gray-700
   };
 
   const saveQuery = async () => {
@@ -128,149 +147,135 @@ export default function SaveQuery() {
     router.push(`/query-results?${searchParams.toString()}`);
   };
 
+  const displayedTags = showAllTags ? PREDEFINED_TAGS : PREDEFINED_TAGS.slice(0, 4);
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => router.back()}
-                className="flex items-center text-blue-600 hover:text-blue-700 font-medium transition-colors"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Results
-              </button>
-              <h1 className="text-2xl font-bold text-gray-800">Save Query</h1>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => router.push('/my-query')}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                My Queries ({savedQueries.length})
-              </button>
-              <button
-                onClick={() => setShowSavedQueries(!showSavedQueries)}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                {showSavedQueries ? 'Hide' : 'View'} Recent
-              </button>
-            </div>
+            <h1 className="text-2xl font-bold text-gray-800">Save Query</h1>
+            <button
+              onClick={() => router.push('/my-query')}
+              className="bg-[#9bec00] hover:bg-[#8dd400] text-white px-6 py-2 rounded-lg font-medium transition-colors"
+            >
+              My Queries ({savedQueries.length})
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-6">
+      {/* Universal Container */}
+      <div className="universal-container max-w-4xl mx-auto" style={{ paddingLeft: '6px', paddingRight: '6px', paddingTop: '24px' }}>
         {/* Save Current Query */}
         {queryData && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Save Current Query</h2>
-            
+          <div className="bg-white rounded-lg p-6 mb-6">
             {/* Query Summary */}
-            <div className="bg-gray-50 p-4 rounded-lg mb-6">
-              <h3 className="font-medium mb-2">Query Summary:</h3>
-              <div className="text-sm text-gray-600 space-y-1">
-                <div>Results: {queryData.resultCount} of {queryData.totalCount} stocks</div>
-                <div>Created: {new Date(queryData.timestamp).toLocaleString()}</div>
-                {Object.keys(queryData.filters).length > 0 && (
-                  <div>
-                    Filters: {Object.entries(queryData.filters)
-                      .filter(([_, value]) => value)
-                      .map(([key, value]) => `${key}: ${value}`)
-                      .join(', ')}
-                  </div>
-                )}
-                {queryData.sortConfig && (
-                  <div>
-                    Sort: {queryData.sortConfig.key} ({queryData.sortConfig.direction})
-                  </div>
-                )}
+            <div className="mb-6">
+              <div className="text-sm text-gray-600 mb-4">
+                Query searched: {Object.entries(queryData.filters)
+                  .filter(([_, value]) => value)
+                  .map(([key, value]) => `${key} = ${value}`)
+                  .join(', ') || 'All stocks'}
               </div>
             </div>
 
             {/* Save Form */}
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium mb-2">Query Name *</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter a name for this query"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+                  placeholder="e.g. Top 50 stocks May 2024"
                 />
               </div>
 
               {/* Tags Selection */}
               <div>
-                <label className="block text-sm font-medium mb-2">Tags</label>
-                <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
-                  {PREDEFINED_TAGS.map(tag => (
+                <label className="block text-sm font-medium mb-3 text-gray-700">Add tags</label>
+                
+                {/* Tag Container Rectangle */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 mb-4 min-h-[60px] flex flex-wrap gap-2 items-start">
+                  {selectedTags.length === 0 ? (
+                    <span className="text-gray-400 text-sm">No tags selected</span>
+                  ) : (
+                    selectedTags.map((tag, index) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-3 py-1 rounded text-sm font-medium"
+                        style={{ 
+                          backgroundColor: getTagColor(PREDEFINED_TAGS.indexOf(tag)),
+                          color: getTagTextColor(getTagColor(PREDEFINED_TAGS.indexOf(tag)))
+                        }}
+                      >
+                        {tag}
+                        <button
+                          onClick={() => handleTagToggle(tag)}
+                          className="ml-2 text-gray-600 hover:text-gray-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                {/* Available Tags */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  {displayedTags.map((tag, index) => (
                     <button
                       key={tag}
                       type="button"
                       onClick={() => handleTagToggle(tag)}
-                      className={`px-3 py-1 text-xs rounded border transition-colors ${
+                      className={`px-3 py-1 text-sm rounded font-medium transition-colors ${
                         selectedTags.includes(tag)
-                          ? 'bg-blue-500 text-white border-blue-500'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300'
+                          ? 'ring-2 ring-blue-400 opacity-50'
+                          : 'hover:opacity-80'
                       }`}
+                      style={{ 
+                        backgroundColor: getTagColor(index),
+                        color: getTagTextColor(getTagColor(index))
+                      }}
                     >
                       {tag}
                     </button>
                   ))}
+                  
+                  {/* Show More/Less Button */}
+                  {PREDEFINED_TAGS.length > 4 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllTags(!showAllTags)}
+                      className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 font-bold transition-colors flex items-center justify-center"
+                    >
+                      {showAllTags ? '−' : '+'}
+                    </button>
+                  )}
                 </div>
-                {selectedTags.length > 0 && (
-                  <div className="mt-3">
-                    <span className="text-sm text-gray-600">Selected tags: </span>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {selectedTags.map(tag => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded"
-                        >
-                          {tag}
-                          <button
-                            onClick={() => handleTagToggle(tag)}
-                            className="ml-1 text-blue-600 hover:text-blue-800"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Description (Optional)</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Description</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Add a description for this query..."
+                  rows={4}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+                  placeholder="e.g. Companies with over 20% growth"
                 />
               </div>
 
-              <div className="flex space-x-4">
+              <div className="pt-4">
                 <button
                   onClick={saveQuery}
                   disabled={saving || !name.trim()}
-                  className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                  className="bg-[#9bec00] hover:bg-[#8dd400] disabled:bg-gray-400 text-white px-8 py-3 rounded-lg font-medium transition-colors"
                 >
-                  {saving ? 'Saving...' : 'Save Query'}
-                </button>
-                <button
-                  onClick={() => router.back()}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-                >
-                  Cancel
+                  {saving ? 'Saving...' : 'Save this query'}
                 </button>
               </div>
             </div>
@@ -279,7 +284,7 @@ export default function SaveQuery() {
 
         {/* Recent Saved Queries */}
         {showSavedQueries && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Recent Saved Queries</h2>
             
             {savedQueries.length === 0 ? (
@@ -300,7 +305,11 @@ export default function SaveQuery() {
                             {query.tags.map((tag, index) => (
                               <span
                                 key={index}
-                                className="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded"
+                                className="inline-block px-2 py-1 rounded text-xs font-medium"
+                                style={{ 
+                                  backgroundColor: getTagColor(PREDEFINED_TAGS.indexOf(tag)),
+                                  color: getTagTextColor(getTagColor(PREDEFINED_TAGS.indexOf(tag)))
+                                }}
                               >
                                 {tag}
                               </span>
