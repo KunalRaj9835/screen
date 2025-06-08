@@ -68,33 +68,36 @@ export default function StockScreener() {
     
     const ratioText: string = ratio.displayName;
     
-    // Add to query with a space and cursor positioning for user to add operator and value
-    setQuery(prev => prev + (prev ? ' AND ' : '') + ratioText + ' ');
+    // Add to the main search input with a space and cursor positioning for user to add operator and value
+    setSearchCompany(prev => prev + (prev ? ' AND ' : '') + ratioText + ' ');
   };
 
   const handleSymbolClick = (symbol: string): void => {
-    setQuery(prev => prev + symbol + ' ');
+    setSearchCompany(prev => prev + symbol + ' ');
+  };
+
+  const isRatioQuery = (queryString: string): boolean => {
+    const ratioNames = Object.values(ratiosData).map(ratio => ratio.displayName);
+    return ratioNames.some(ratioName => queryString.includes(ratioName));
   };
 
   const handleRunQuery = (): void => {
-    if (!query.trim() && !searchCompany.trim()) {
+    if (!searchCompany.trim()) {
       alert('Please enter a search query or company name');
       return;
     }
 
     setLoading(true);
     
-    // Create search parameters from filters and queries
+    // Create search parameters based on query type
     const searchParams = new URLSearchParams();
+    const queryString = searchCompany.trim();
     
-    // Add company name if provided
-    if (searchCompany.trim()) {
-      searchParams.append('Name', searchCompany.trim());
-    }
-    
-    // Add query if provided
-    if (query.trim()) {
-      searchParams.append('query', query.trim());
+    // Check if it's a ratio-based query or just a company name
+    if (isRatioQuery(queryString)) {
+      searchParams.append('query', queryString);
+    } else {
+      searchParams.append('Name', queryString);
     }
     
     // Add any additional filters
@@ -129,9 +132,16 @@ export default function StockScreener() {
 
     setLoading(true);
     
-    // Create query parameters from company search
+    // Create query parameters from search input
     const searchParams = new URLSearchParams();
-    searchParams.append('Name', searchCompany.trim());
+    const queryString = searchCompany.trim();
+    
+    // Check if it's a ratio-based query or just a company name
+    if (isRatioQuery(queryString)) {
+      searchParams.append('query', queryString);
+    } else {
+      searchParams.append('Name', queryString);
+    }
     
     // Navigate to results page with search parameters
     const resultUrl = `/query-result?${searchParams.toString()}`;
@@ -182,7 +192,7 @@ export default function StockScreener() {
     if (activeTab === 'Create Screen') {
       return (
         <div className="space-y-4">
-          {/* Search Company Input */}
+          {/* Single Query Input */}
           <div className="relative">
             <input
               type="text"
@@ -207,16 +217,9 @@ export default function StockScreener() {
             </button>
           </div>
 
-          {/* Query Input */}
-          <div>
-            <textarea
-              placeholder="For example: Market capitalization > 500 AND Price to earning < 15 AND Return on capital employed > 22%"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9bec00] focus:border-transparent resize-none"
-              rows={3}
-              value={query}
-              onChange={handleQueryChange}
-              onKeyPress={handleKeyPress}
-            />
+          {/* Example Text */}
+          <div className="text-gray-500 text-sm px-3">
+            For example: Market capitalization &gt; 500 AND Price to earning &lt; 15 AND Return on capital employed &gt; 22%
           </div>
 
           {/* Run Query Button */}
@@ -229,11 +232,10 @@ export default function StockScreener() {
           </button>
 
           {/* Clear Filters */}
-          {(searchCompany || query || Object.keys(filters).some(key => filters[key])) && (
+          {(searchCompany || Object.keys(filters).some(key => filters[key])) && (
             <button
               onClick={() => {
                 setSearchCompany('');
-                setQuery('');
                 setFilters({});
               }}
               className="w-full text-gray-500 hover:text-gray-700 py-2 text-sm transition-colors"
@@ -265,15 +267,15 @@ export default function StockScreener() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="flex justify-between items-center p-4 border-b border-gray-200">
+      <div className="flex justify-between pl-10 pr-30 items-center px-8 py-4 border-b border-gray-200 ml-[10%]">
         <h1 className="text-2xl font-bold text-gray-800">Screener</h1>
         <button className="bg-[#9bec00] hover:bg-[#8bd400] text-black px-4 py-2 rounded-lg font-medium transition-colors">
           Demo Videos
         </button>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6">
+      {/* Main Content - Increased left margin for more space */}
+      <div className="max-w-6xl pl-10 mx-auto p-6 ml-[10%] mr-[5%]">
         {/* Tabs */}
         <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
           {tabs.map((tab: TabType) => (
@@ -307,9 +309,6 @@ export default function StockScreener() {
               <span className="text-[#9bec00] ml-2 underline cursor-pointer">Show ratios</span>
             </span>
             <div className="flex items-center space-x-2">
-              <span className="text-sm bg-blue-500 text-white px-2 py-1 rounded">
-                1140 × 242 Hug
-              </span>
               {showRatios ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
             </div>
           </button>
@@ -423,13 +422,6 @@ export default function StockScreener() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Bottom dimension indicator */}
-              <div className="flex justify-center pt-4">
-                <span className="text-sm bg-blue-500 text-white px-2 py-1 rounded">
-                  1140 × 984 Hug
-                </span>
               </div>
             </div>
           )}
