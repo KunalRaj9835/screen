@@ -19,6 +19,8 @@ export default function QueryResult() {
     key: string;
     direction: 'asc' | 'desc';
   } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -45,14 +47,6 @@ export default function QueryResult() {
       console.error('Error fetching data:', error);
     }
     setLoading(false);
-  };
-
-  const getTextColumns = (): string[] => {
-    if (data.length === 0) return [];
-    const firstRow = data[0];
-    return Object.keys(firstRow).filter(key => 
-      (typeof firstRow[key] === 'string') && key !== 'S.No'
-    );
   };
 
   const applyFilters = (): StockData[] => {
@@ -95,25 +89,6 @@ export default function QueryResult() {
     setSortConfig({ key, direction });
   };
 
-  const handleTextFilterChange = (column: string, value: string) => {
-    const newFilters = {
-      ...filters,
-      [column]: value
-    };
-    setFilters(newFilters);
-    
-    // Update URL parameters
-    const searchParams = new URLSearchParams();
-    Object.keys(newFilters).forEach(key => {
-      if (newFilters[key]) {
-        searchParams.append(key, newFilters[key]);
-      }
-    });
-    
-    // Update URL without navigation
-    window.history.replaceState({}, '', `${window.location.pathname}?${searchParams.toString()}`);
-  };
-
   const formatNumber = (value: any): string => {
     if (typeof value !== 'number') return value?.toString() || '';
     
@@ -126,6 +101,21 @@ export default function QueryResult() {
     }
     
     return value.toLocaleString('en-IN');
+  };
+
+  // Generate dynamic subtitle based on filters
+  const generateSubtitle = (): string => {
+    if (Object.keys(filters).length === 0) {
+      return 'All stocks';
+    }
+    
+    const filterDescriptions = Object.entries(filters)
+      .filter(([key, value]) => value && value.trim() !== '')
+      .map(([key, value]) => `${key} = ${value}`);
+    
+    return filterDescriptions.length > 0 
+      ? filterDescriptions.join(' & ') 
+      : 'All stocks';
   };
 
   // Export to CSV function
@@ -183,14 +173,6 @@ export default function QueryResult() {
     router.push(`/save-query?data=${encodedData}`);
   };
 
-  const handleBackToSearch = () => {
-    router.push('/');
-  };
-
-  const handleNewSearch = () => {
-    router.push('/');
-  };
-
   const handleMyQueries = () => {
     router.push('/my-query');
   };
@@ -208,134 +190,54 @@ export default function QueryResult() {
 
   const filteredAndSortedData = sortData(applyFilters());
   const columns = data.length > 0 ? Object.keys(data[0]) : [];
-  const textColumns = getTextColumns();
+  
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = filteredAndSortedData.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {/* Export and Save buttons - Top Left */}
-              <div className="flex items-center space-x-2 mr-4">
-                <button
-                  onClick={exportToCSV}
-                  className="flex items-center bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg font-medium transition-colors text-sm"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Export CSV
-                </button>
-                <button
-                  onClick={saveQuery}
-                  className="flex items-center bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg font-medium transition-colors text-sm"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                  Save Query
-                </button>
-                <button
-                  onClick={handleMyQueries}
-                  className="flex items-center bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 rounded-lg font-medium transition-colors text-sm"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                  My Queries
-                </button>
-              </div>
-              
-              <button
-                onClick={handleBackToSearch}
-                className="flex items-center text-blue-600 hover:text-blue-700 font-medium transition-colors"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                New Search
-              </button>
-              <h1 className="text-2xl font-bold text-gray-800">Stock Results</h1>
+    <div className="min-h-screen bg-white pl-45 pr-20">
+      {/* Main content - full width */}
+      <div className="p-6">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800 mb-1">Query Results</h1>
+              <p className="text-gray-600">{generateSubtitle()}</p>
+              <p className="text-sm text-gray-500">{filteredAndSortedData.length} results found: Showing page {currentPage} of {totalPages}</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                {filteredAndSortedData.length} of {data.length} stocks
-              </div>
+            <div className="flex items-center space-x-3">
               <button
-                onClick={handleNewSearch}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                onClick={exportToCSV}
+                className="bg-white border border-gray-300 hover:bg-gray-50 text-black px-4 py-2 rounded font-medium transition-colors"
               >
-                New Search
+                Export
+              </button>
+              <button
+                onClick={saveQuery}
+                className="bg-[#9bec00] hover:bg-[#8bc400] text-white px-4 py-2 rounded font-medium transition-colors"
+              >
+                Save this query
+              </button>
+              <button
+                onClick={handleMyQueries}  
+                className="bg-white border border-gray-300 hover:bg-gray-50 text-black px-4 py-2 rounded font-medium transition-colors"
+              >
+                My Queries
               </button>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Active Filters Display */}
-        {Object.keys(filters).some(key => filters[key]) && (
-          <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-700">Active Filters:</h3>
-              <button
-                onClick={() => {
-                  setFilters({});
-                  window.history.replaceState({}, '', window.location.pathname);
-                }}
-                className="text-xs text-blue-600 hover:text-blue-700"
-              >
-                Clear All
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(filters).map(key => 
-                filters[key] && (
-                  <span
-                    key={key}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                  >
-                    {key}: {filters[key]}
-                    <button
-                      onClick={() => handleTextFilterChange(key, '')}
-                      className="ml-2 text-blue-600 hover:text-blue-800"
-                    >
-                      ×
-                    </button>
-                  </span>
-                )
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Additional Filters */}
-        {textColumns.length > 0 && (
-          <div className="mb-6 bg-white p-6 rounded-lg shadow-sm">
-            <h2 className="text-lg font-semibold mb-4">Refine Results</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {textColumns.map(column => (
-                <div key={column}>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">
-                    {column}
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={`Filter by ${column}`}
-                    value={filters[column] || ''}
-                    onChange={(e) => handleTextFilterChange(column, e.target.value)}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Results Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden border">
           {filteredAndSortedData.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-gray-500 text-lg mb-2">No stocks found</div>
@@ -343,13 +245,13 @@ export default function QueryResult() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full">
+                <thead style={{ backgroundColor: '#f2f3f7' }}>
                   <tr>
                     {columns.map(column => (
                       <th 
                         key={column} 
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors border-r border-gray-300 last:border-r-0"
                         onClick={() => handleSort(column)}
                       >
                         <div className="flex items-center">
@@ -364,11 +266,14 @@ export default function QueryResult() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredAndSortedData.map((row, index) => (
-                    <tr key={row['S.No'] || index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <tbody>
+                  {currentData.map((row, index) => (
+                    <tr 
+                      key={row['S.No'] || index} 
+                      className={index % 2 === 0 ? 'bg-white' : 'bg-[#9bec00]'}
+                    >
                       {columns.map(column => (
-                        <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td key={column} className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200 last:border-r-0">
                           {column === 'Name' ? (
                             <div className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer">
                               {row[column]}
@@ -389,6 +294,57 @@ export default function QueryResult() {
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center space-x-2 mt-6">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+              
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => handlePageChange(pageNum)}
+                  className={`px-3 py-2 rounded font-medium transition-colors ${
+                    currentPage === pageNum
+                      ? 'bg-[#9bec00] text-black'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+            {totalPages > 5 && currentPage < totalPages - 2 && (
+              <>
+                <span className="px-2 text-gray-500">...</span>
+                <button
+                  onClick={() => handlePageChange(totalPages)}
+                  className="px-3 py-2 rounded font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+            {currentPage < totalPages && (
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="px-3 py-2 rounded font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+              >
+                &gt;
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
