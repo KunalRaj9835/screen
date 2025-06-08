@@ -73,27 +73,6 @@ export default function SearchPage() {
               )}
             </button>
           </div>
-
-          {/* Additional Search Fields */}
-          <div className="space-y-3">
-            <input
-              type="text"
-              placeholder="Search by sector..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={filters['Sector'] || ''}
-              onChange={(e) => handleTextFilterChange('Sector', e.target.value)}
-              onKeyPress={handleKeyPress}
-            />
-            
-            <input
-              type="text"
-              placeholder="Search by industry..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={filters['Industry'] || ''}
-              onChange={(e) => handleTextFilterChange('Industry', e.target.value)}
-              onKeyPress={handleKeyPress}
-            />
-          </div>
           
           {/* Search Button */}
           <button
